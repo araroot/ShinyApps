@@ -5,10 +5,11 @@ library(quantmod)
 library(lubridate)
 library(reshape2)
 
-get.data <- function(symbol, n) {
+get.data <- function(symbol, years, ma.period) {
 	df.index <- read.csv(paste('data/',symbol,'.csv',sep=''))
 	df.index$Date <- dmy(df.index$Date)
-	df.processed <- analyze.index(df.index, n)
+	df.processed <- analyze.index(df.index, as.numeric(ma.period)) 
+	df.processed <- subset(df.processed, year(Date) >= years[1] & year(Date) <= years[2])
 	df.processed
 }
 
@@ -33,7 +34,6 @@ analyze.index <- function(df.in, n) {
   df.raw$flag <- ifelse(df.raw$Close > df.raw$sma, TRUE, FALSE)
   df.raw$smaflag <-c(NA, df.raw$flag[1:(nrow(df.raw)-1)]) # Lag the flag by 1 day
   #
-  df.raw$bothc <- ifelse(df.raw$smaflag == TRUE & df.raw$l2f2 == TRUE, TRUE, FALSE)
   df.raw$anyc <- ifelse(df.raw$smaflag == TRUE | df.raw$l2f2 == TRUE, TRUE, FALSE)
   
   df.raw
@@ -76,7 +76,7 @@ l2f2.stock <- function(in.xts, n) {
 
 # Define server logic required to generate and plot a random distribution
 shinyServer(function(input, output) {
-  dataset <- reactive(get.data(input$index, input$n)) 
+  dataset <- reactive(get.data(input$index, input$ayears, input$ma.period)) 
   
   output$plot_l2f2 <- renderPlot({
 	df.raw <- dataset()
@@ -100,25 +100,29 @@ shinyServer(function(input, output) {
 	print(p)
   })
   
-  output$plot_both <- renderPlot({
-	df.raw <- dataset()
-	df.in <- ddply(df.raw, c('year','bothc'), summarise, total_return=sum(ret, na.rm=T)*100.0)
-	p <- ggplot(df.in, aes(x=year, y=total_return, fill=bothc)) + geom_bar(stat='identity', position='dodge')
-	p <- p + scale_fill_manual(values=c('pink','blue'))
-	p <- p + ggtitle('Analysis of returns when BOTH conditions are true')
-	p <- p + guides(fill=FALSE) 
-	p <- p + theme_bw() + theme(axis.title.x = element_blank(), axis.title.y = element_blank())
-	print(p)
-  })
   
-  output$plot_any <- renderPlot({
+  output$plot_equity <- renderPlot({
 	df.raw <- dataset()
-	df.in <- ddply(df.raw, c('year','anyc'), summarise, total_return=sum(ret, na.rm=T)*100.0)
-	p <- ggplot(df.in, aes(x=year, y=total_return, fill=anyc)) + geom_bar(stat='identity', position='dodge')
-	p <- p + scale_fill_manual(values=c('pink','blue'))
-	p <- p + ggtitle('Analysis of returns when ANY ONE condition is true')
-	p <- p + guides(fill=FALSE) 
-	p <- p + theme_bw() + theme(axis.title.x = element_blank(), axis.title.y = element_blank())
+	df.raw <- df.raw[complete.cases(df.raw),]
+	#cat(summary(df.raw))
+	df.raw$s.bh <- 1000.0
+	df.raw$s.l2f2 <- 1000.0
+	df.raw$s.sma <- 1000.0
+	df.raw$s.any <- 1000.0
+	
+	for (i in (2:nrow(df.raw)) ) {
+		eret = exp(df.raw$ret[i])
+		df.raw$s.bh[i]   <- df.raw$s.bh[i-1] * eret
+		df.raw$s.l2f2[i] <- ifelse(df.raw$l2f2[i], df.raw$s.l2f2[i-1] * eret, df.raw$s.l2f2[i-1])
+		df.raw$s.sma[i]  <- ifelse(df.raw$smaflag[i], df.raw$s.sma[i-1] * eret, df.raw$s.sma[i-1])
+		df.raw$s.any[i] <- ifelse(df.raw$anyc[i], df.raw$s.any[i-1] * eret, df.raw$s.any[i-1])
+		
+	}
+	p <- ggplot(df.raw, aes(x=Date, y=s.bh)) + geom_line(color='black')
+	p <- p + geom_line(aes(x=Date, y=s.l2f2), color='blue')
+	p <- p + geom_line(aes(x=Date, y=s.sma), color='pink')
+	p <- p + geom_line(aes(x=Date, y=s.any), color='green')
+	
 	print(p)
   })
   	
@@ -127,14 +131,5 @@ shinyServer(function(input, output) {
 	df.wide <- dcast(df.in, year ~ l2f2, value.var="total_return")
 	rownames(df.wide) <- NULL
 	df.wide
-  })
-  
-  output$summary_sma <- renderTable({
-	df.in <- sma.stock(dataset(), ndays=input$n)
-	df.switches <- ddply(df.in, 'year', summarize, switches=sum(flip, na.rm=T))
-	df.switches
-	#df.wide <- dcast(df.in, year ~ smaflag, value.var='total_return')
-	#rownames(df.wide) <- NULL
-	#df.wide
   })
 })

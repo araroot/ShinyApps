@@ -12,17 +12,16 @@ shinyUI(pageWithSidebar(
   # Application title
   headerPanel("SMA and L2F2"),
 
-  # Sidebar with a slider input for number of observations
   sidebarPanel(
-    #textInput("symbol", "Ticker Symbol:", "^NSEI"),
     selectInput("index", "Choose an index:",
                 choices = idx_choices),
     br(),
-    sliderInput("n", 
-                "Period for SMA:", 
-                 value = 50,
-                 min = 5, 
-                 max = 200),
+    sliderInput("ayears", "Analysis Years:",
+                min = 2000, max = 2012, value = c(2005,2012)),
+    br(),            
+    selectInput("ma.period", "Choose MA period:",
+                choices = c('20','50','100','200')),
+                
     submitButton("Update View")
   ),
   
@@ -32,10 +31,8 @@ shinyUI(pageWithSidebar(
   mainPanel(
 		plotOutput('plot_l2f2', width='60%',height='300px'),
         plotOutput('plot_sma', width='60%',height='300px'),
-        plotOutput('plot_any', width='60%',height='300px'),
-        plotOutput('plot_both', width='60%',height='300px'),
-        tableOutput("summary_l2f2"),
-        tableOutput("summary_sma")
+        plotOutput('plot_equity', width='80%',height='300px'),
+        tableOutput("summary_l2f2")
   )
 ))
 
