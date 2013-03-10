@@ -118,18 +118,21 @@ shinyServer(function(input, output) {
 		df.raw$s.any[i] <- ifelse(df.raw$anyc[i], df.raw$s.any[i-1] * eret, df.raw$s.any[i-1])
 		
 	}
-	p <- ggplot(df.raw, aes(x=Date, y=s.bh)) + geom_line(color='black')
-	p <- p + geom_line(aes(x=Date, y=s.l2f2), color='blue')
-	p <- p + geom_line(aes(x=Date, y=s.sma), color='pink')
-	p <- p + geom_line(aes(x=Date, y=s.any), color='green')
+	p <- ggplot(df.raw, aes(x=Date, y=s.bh)) 
+	p <- p + geom_line(color='black')
+	p <- p + geom_line(aes(x=Date, y=s.l2f2, color='L2F2 only'))
+	p <- p + geom_line(aes(x=Date, y=s.sma, color='SMA only'))
+	p <- p + geom_line(aes(x=Date, y=s.any, color='Both'))
+	p <- p + scale_color_manual(values=c('blue', 'red', 'green'), name='')
 	
 	print(p)
   })
   	
-  output$summary_l2f2 <- renderTable({
-	df.in <- l2f2.stock(dataset(), n=2)
-	df.wide <- dcast(df.in, year ~ l2f2, value.var="total_return")
-	rownames(df.wide) <- NULL
-	df.wide
-  })
+  #output$summary_l2f2 <- renderTable({
+	#df.in <- l2f2.stock(dataset(), n=2)
+	#df.wide <- dcast(df.in, year ~ l2f2, value.var="total_return")
+	#rownames(df.wide) <- NULL
+	#df.wide
+  #})
+  
 })

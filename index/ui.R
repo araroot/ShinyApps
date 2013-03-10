@@ -29,10 +29,10 @@ shinyUI(pageWithSidebar(
 
   # Show a plot of the generated distribution
   mainPanel(
-		plotOutput('plot_l2f2', width='60%',height='300px'),
-        plotOutput('plot_sma', width='60%',height='300px'),
-        plotOutput('plot_equity', width='80%',height='300px'),
-        tableOutput("summary_l2f2")
+		plotOutput('plot_equity', width='80%',height='300px'),
+		plotOutput('plot_l2f2', width='50%',height='200px'),
+        plotOutput('plot_sma', width='50%',height='200px')
+        #tableOutput("summary_l2f2")
   )
 ))
 
